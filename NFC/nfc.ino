@@ -30,7 +30,9 @@ volatile bool connected = false;
 
 void setup(void)
 {
+
   pinMode(2, OUTPUT); 
+  pinMode(1, OUTPUT); 
   Serial.begin(115200);
   Wire.begin(48, 47);
   Serial.println("*** Testing Module PN532 NFC RFID ***");
@@ -41,10 +43,10 @@ void setup(void)
 
 void loop()
 {
-  digitalWrite(2,HIGH);
+  //digitalWrite(2,HIGH);
   boolean success;
   // Buffer to store the UID
-  uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
+  uint8_t uid[] = { 0, 0, 0, 0};
   // UID size (4 or 7 bytes depending on card type)
   uint8_t uidLength;
 
@@ -65,10 +67,23 @@ void loop()
     Serial.print("Size of UID: "); Serial.print(uidLength, DEC);
     Serial.println(" bytes");
     Serial.print("UID: ");
-    
+    // digitalWrite(2,HIGH);
+    Serial.println("");
     for (uint8_t i = 0; i < uidLength; i++)
     {
-      Serial.print(" "); Serial.print(uid[i], HEX);
+      Serial.print(" "); Serial.print(uid[i]);
+    }
+    if (check_id(uid)){
+      digitalWrite(1,HIGH);
+      digitalWrite(2,LOW);
+      Serial.println("111111111111111111111");
+      
+    }
+    else{
+      digitalWrite(2,HIGH);
+      digitalWrite(1,LOW);
+      Serial.println("00000000000000000");
+
     }
     Serial.println("");
     Serial.println("");
@@ -78,6 +93,7 @@ void loop()
   }
   else
   {
+    // digitalWrite(2,LOW);
     // PN532 probably timed out waiting for a card
     // Serial.println("Timed out waiting for a card");
   }
@@ -112,4 +128,23 @@ bool connect() {
   Serial.println("");
 
   return true;
+}
+bool check_id(uint8_t now[]){
+  uint8_t id_list[2][4]={{35 ,226 ,2 ,19},{179,90,89,252}};
+  bool ans = 0 ;
+  for (uint8_t i = 0 ; i<2;i++)
+  {
+    for (uint8_t j = 0 ; j<4;i++){
+      if (now[j] != id_list[i][j]){
+        break;
+      }
+      ans = 1;
+      
+    }
+    if (ans){
+      return true ;
+    }
+
+  }
+  return false ;
 }
