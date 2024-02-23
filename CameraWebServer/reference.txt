@@ -10,7 +10,5 @@ partition : huge app (3mb no ota/1mb...)
 
 
 use port
--rdx 
--uo1
--txd
--uor
+rdx - uo1
+txd - uor
