@@ -3,3 +3,7 @@ https://th.cytron.io/p-esp32-cam-wireless-iot-vision-development-board?r=1
 
 video
 https://www.youtube.com/watch?v=VCZXSh6f5sE
+
+setup camera
+selection board : esp32 wrover module
+partition : huge app (3mb no ota/1mb...)
