@@ -1,0 +1,2 @@
+"C:\Users\Windows\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.6/esptool" --chip esp32s3 --port COM5 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dout --flash_freq 80m --flash_size 32MB 0x0 bootloader.bin 0x8000 partitions.bin 0x10000 micropython.bin
+pause
