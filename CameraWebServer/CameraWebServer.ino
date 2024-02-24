@@ -1,7 +1,7 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include <Base64.h>
+// #include <Base64.h>
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -11,14 +11,14 @@
 #define CAMERA_MODEL_AI_THINKER
 
 #define TOPIC_PREFIX "b6610502145"
-#define TOPIC_TEST TOPIC_PREFIX "/test"
+#define TOPIC_TEST TOPIC_PREFIX "/status"
 
 #include "camera_pins.h"
 
 const char* WIFI_SSID = "KUWIN-IOT";
 const char* WIFI_PASS = "";
 
-// mqtt broker ip address
+//  mqtt broker ip address
 const char* MQTT_BROKER = "iot.cpe.ku.ac.th";
 const char* MQTT_USER = "b6610502145";
 const char* MQTT_PASS = "parinya.ao@ku.th";
@@ -26,12 +26,12 @@ const char* MQTT_PASS = "parinya.ao@ku.th";
 WiFiClient wifiClient;
 PubSubClient mqtt(MQTT_BROKER, 1883, wifiClient);
 uint32_t last_publish = 0;
-//
+
 
 // about capture interval
 #define RESOLUTION_X 640
 #define RESOLUTION_Y 480
-const int capture_interval = 2500;
+const int capture_interval = 5000;
 //
 
 // function connect wifi
@@ -103,11 +103,11 @@ void setup() {
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
     config.frame_size = FRAMESIZE_VGA;
-    config.jpeg_quality = 10;
+    config.jpeg_quality = 50;
     config.fb_count = 2;
   } else {
     config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12;
+    config.jpeg_quality = 50;
     config.fb_count = 1;
   }
 
@@ -141,27 +141,10 @@ void loop() {
   // Capture and publish image every 1 second
   uint32_t now = millis();
   if (now - last_publish >= capture_interval) {
-    // Capture image
-    camera_fb_t * fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Failed to capture image");
-      return;
-    }
-
-    // Publish image as payload
-    String payload = base64::encode(fb->buf, fb->len);
-
-    // Publish image as payload
+    String payload = "connected";
     mqtt.publish(TOPIC_TEST, payload.c_str());
-    Serial.println(payload.c_str());
-
-    // Release the frame buffer
-    esp_camera_fb_return(fb);
-
-    // Update last_publish time
     last_publish = now;
-
-    Serial.println("Image published successfully");
+    Serial.println("connected with wifi");
   }
 }
  
