@@ -136,25 +136,6 @@ void setup() {
 }
 
 void loop() {
-  // 
-  static unsigned long last_capture = 0;
-  unsigned long now = millis();
-
-  if (now - last_capture >= capture_interval) {
-    Serial.println("Taking a photo...");
-    last_capture = now;
-
-    camera_fb_t * fb = NULL;
-    fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Camera capture failed");
-      return;
-    }
-
-    esp_camera_fb_return(fb);
-
-    Serial.println("Photo taken!");
-  }
 
   // test publish
   mqtt.loop();
