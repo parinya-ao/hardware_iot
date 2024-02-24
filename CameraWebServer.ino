@@ -1,6 +1,7 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Base64.h>
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -136,17 +137,33 @@ void setup() {
 }
 
 void loop() {
-
-  // test publish
+  // Maintain MQTT connection
   mqtt.loop();
+
+  // Capture and publish image every 1 second
   uint32_t now = millis();
-  if (now - last_publish >= 3000) {
-    String text_test = "ping hello world";
-    String payload = text_test;
-    Serial.println("publishing text");
-    mqtt.publish(TOPIC_TEST, payload.c_str());
+  if (now - last_publish >= capture_interval) {
+    // Capture image
+    camera_fb_t * fb = esp_camera_fb_get();
+    if (!fb) {
+      Serial.println("Failed to capture image");
+      return;
+    }
+
+    // Publish image as payload
+    String base64Image = base64::encode(fb->buf, fb->len);
+
+    // Publish image as payload
+    mqtt.publish(TOPIC_TEST, base64Image.c_str());
+    Serial.println(base64Image.c_str());
+
+    // Release the frame buffer
+    esp_camera_fb_return(fb);
+
+    // Update last_publish time
     last_publish = now;
-    Serial.println("published successfully");
+
+    Serial.println("Image published successfully");
   }
 }
  
