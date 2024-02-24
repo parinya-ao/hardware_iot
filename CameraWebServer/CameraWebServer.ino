@@ -1,7 +1,8 @@
- 
 #include "esp_camera.h"
 #include <WiFi.h>
-  
+#include <PubSubClient.h>
+#include <Base64.h>
+
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE
@@ -9,10 +10,64 @@
 //#define CAMERA_MODEL_M5STACK_WIDE
 #define CAMERA_MODEL_AI_THINKER
 
+#define TOPIC_PREFIX "b6610502145"
+#define TOPIC_TEST TOPIC_PREFIX "/test"
+
 #include "camera_pins.h"
 
-const char* ssid = "123";
-const char* password = "123456777";
+const char* WIFI_SSID = "KUWIN-IOT";
+const char* WIFI_PASS = "";
+
+// mqtt broker ip address
+const char* MQTT_BROKER = "iot.cpe.ku.ac.th";
+const char* MQTT_USER = "b6610502145";
+const char* MQTT_PASS = "parinya.ao@ku.th";
+// end mqtt broker ip address
+WiFiClient wifiClient;
+PubSubClient mqtt(MQTT_BROKER, 1883, wifiClient);
+uint32_t last_publish = 0;
+//
+
+// about capture interval
+#define RESOLUTION_X 640
+#define RESOLUTION_Y 480
+const int capture_interval = 2500;
+//
+
+// function connect wifi
+void connect_wifi() {
+  printf("WiFi MAC address is %s\n", WiFi.macAddress().c_str());
+  printf("Connecting to WiFi %s.\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    fflush(stdout);
+    delay(500);
+  }
+  Serial.println("\nWiFi success.");
+}
+// end function connect wifi
+
+// function connect mqtt
+void connect_mqtt() {
+  Serial.print("Connecting to MQTT broker at ");
+  Serial.println(MQTT_BROKER);
+  if (!mqtt.connect("", MQTT_USER, MQTT_PASS)) {
+    Serial.println("Failed to connect to MQTT broker. Please check your credentials and try again.");
+    for (;;) {} // wait here forever
+  }
+  mqtt.setCallback(mqtt_callback);
+  mqtt.subscribe(TOPIC_TEST);
+  Serial.println("MQTT broker connected.");
+}
+// end functon connecct mqtt
+
+// function mqtt call back
+void mqtt_callback(char* topic, byte* payload, unsigned int length) {
+
+}
+// end function mqtt call back
 
 void startCameraServer();
 
@@ -21,6 +76,9 @@ void setup() {
   Serial.setDebugOutput(true);
   Serial.println();
 
+  connect_wifi();
+
+  connect_mqtt();
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -44,7 +102,7 @@ void setup() {
   config.pixel_format = PIXFORMAT_JPEG;
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
-    config.frame_size = FRAMESIZE_UXGA;
+    config.frame_size = FRAMESIZE_VGA;
     config.jpeg_quality = 10;
     config.fb_count = 2;
   } else {
@@ -65,28 +123,6 @@ void setup() {
     return;
   }
 
-  sensor_t * s = esp_camera_sensor_get();
-  //initial sensors are flipped vertically and colors are a bit saturated
-  if (s->id.PID == OV3660_PID) {
-    s->set_vflip(s, 1);//flip it back
-    s->set_brightness(s, 1);//up the blightness just a bit
-    s->set_saturation(s, -2);//lower the saturation
-  }
-  //drop down frame size for higher initial frame rate
-  s->set_framesize(s, FRAMESIZE_QVGA);
-
-#if defined(CAMERA_MODEL_M5STACK_WIDE)
-  s->set_vflip(s, 1);
-  s->set_hmirror(s, 1);
-#endif
-
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
   Serial.println("WiFi connected");
 
   startCameraServer();
@@ -94,10 +130,38 @@ void setup() {
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
+  // publish
+  last_publish = 0;
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  delay(10000);
+  // Maintain MQTT connection
+  mqtt.loop();
+
+  // Capture and publish image every 1 second
+  uint32_t now = millis();
+  if (now - last_publish >= capture_interval) {
+    // Capture image
+    camera_fb_t * fb = esp_camera_fb_get();
+    if (!fb) {
+      Serial.println("Failed to capture image");
+      return;
+    }
+
+    // Publish image as payload
+    String payload = base64::encode(fb->buf, fb->len);
+
+    // Publish image as payload
+    mqtt.publish(TOPIC_TEST, payload.c_str());
+    Serial.println(payload.c_str());
+
+    // Release the frame buffer
+    esp_camera_fb_return(fb);
+
+    // Update last_publish time
+    last_publish = now;
+
+    Serial.println("Image published successfully");
+  }
 }
  
